@@ -1,4 +1,7 @@
+import { useI18n } from '../i18n.jsx'
+
 export default function Modal({ title, onClose, children, wide }) {
+  const { t } = useI18n()
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4" onMouseDown={onClose}>
       <div
@@ -7,7 +10,7 @@ export default function Modal({ title, onClose, children, wide }) {
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{title}</h2>
-          <button onClick={onClose} className="text-2xl leading-none text-slate-400 hover:text-slate-600" aria-label="Close">×</button>
+          <button onClick={onClose} className="text-2xl leading-none text-slate-400 hover:text-slate-600" aria-label={t('common.close')}>×</button>
         </div>
         {children}
       </div>

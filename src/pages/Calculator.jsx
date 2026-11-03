@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api'
-import { MONTHS, money, todayISO } from '../utils'
+import { useI18n } from '../i18n.jsx'
+import { DICTIONARIES } from '../translations'
+import { money, todayISO } from '../utils'
 
 export default function Calculator() {
+  const { t, months, levels } = useI18n()
   const now = new Date()
   const [ym, setYm] = useState({ year: now.getFullYear(), month: now.getMonth() + 1 })
   const [data, setData] = useState(null)
@@ -47,12 +50,18 @@ export default function Calculator() {
   }
 
   async function deleteAdvance(a) {
-    if (!confirm('Delete this advance?')) return
+    if (!confirm(t('calc.confirmDeleteAdvance'))) return
     await api(`/advances/${a.id}/`, { method: 'DELETE' })
     load()
   }
 
-  if (!data) return <p className="text-slate-500">Loading…</p>
+  // The salary API only returns the English level name; map it back to the level key
+  const levelLabel = (display) => {
+    const key = Object.keys(DICTIONARIES.en.levels).find((k) => DICTIONARIES.en.levels[k] === display)
+    return (key && levels[key]) || display
+  }
+
+  if (!data) return <p className="text-slate-500">{t('common.loading')}</p>
 
   const rows = data.groups.map((g) => {
     const inp = inputs[g.id] || { percent: 0, sum: 0 }
@@ -67,28 +76,28 @@ export default function Calculator() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="mr-auto text-2xl font-bold">Salary calculator</h1>
+        <h1 className="mr-auto text-2xl font-bold">{t('calc.title')}</h1>
         <button className="btn btn-ghost" onClick={() => shift(-1)}>←</button>
-        <span className="w-40 text-center font-semibold">{MONTHS[ym.month - 1]} {ym.year}</span>
+        <span className="w-40 text-center font-semibold">{months[ym.month - 1]} {ym.year}</span>
         <button className="btn btn-ghost" onClick={() => shift(1)}>→</button>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-4">
-        <Big label="Collected from groups" value={money(totalSum)} />
-        <Big label="My share" value={money(totalShare)} cls="text-indigo-600 dark:text-indigo-400" />
-        <Big label="Received in advance" value={`− ${money(advanceTotal)}`} cls="text-orange-500" />
-        <Big label="Remaining to receive" value={money(remaining)} cls={remaining < 0 ? 'text-red-600' : 'text-emerald-600'} />
+        <Big label={t('calc.collected')} value={money(totalSum)} />
+        <Big label={t('calc.share')} value={money(totalShare)} cls="text-indigo-600 dark:text-indigo-400" />
+        <Big label={t('calc.advance')} value={`− ${money(advanceTotal)}`} cls="text-orange-500" />
+        <Big label={t('calc.remaining')} value={money(remaining)} cls={remaining < 0 ? 'text-red-600' : 'text-emerald-600'} />
       </div>
 
       <div className="card overflow-x-auto p-0">
         <table className="w-full text-sm">
           <thead className="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-slate-800">
             <tr>
-              <th className="px-4 py-3">Group</th>
-              <th className="px-4 py-3">Paid students</th>
-              <th className="px-4 py-3">Overall sum</th>
-              <th className="px-4 py-3">My percentage</th>
-              <th className="px-4 py-3 text-right">My share</th>
+              <th className="px-4 py-3">{t('col.group')}</th>
+              <th className="px-4 py-3">{t('calc.paidStudents')}</th>
+              <th className="px-4 py-3">{t('calc.overall')}</th>
+              <th className="px-4 py-3">{t('calc.percent')}</th>
+              <th className="px-4 py-3 text-right">{t('calc.share')}</th>
             </tr>
           </thead>
           <tbody>
@@ -96,16 +105,16 @@ export default function Calculator() {
               <tr key={r.id} className="border-b border-slate-100 last:border-0 dark:border-slate-800">
                 <td className="px-4 py-3">
                   <div className="font-medium">{r.name}</div>
-                  <div className="text-xs text-slate-500">{r.level_display}</div>
+                  <div className="text-xs text-slate-500">{levelLabel(r.level_display)}</div>
                 </td>
                 <td className="px-4 py-3">
                   {r.paid_count}/{r.student_count}
-                  <div className="text-xs text-slate-500">expected {money(r.expected)}</div>
+                  <div className="text-xs text-slate-500">{t('calc.expected', { amount: money(r.expected) })}</div>
                 </td>
                 <td className="px-4 py-3">
                   <input className="input w-36" type="number" min="0" step="any" value={r.inp.sum} onChange={setInput(r.id, 'sum')} />
                   {Number(r.inp.sum) !== Number(r.collected) && (
-                    <div className="text-xs text-slate-500">recorded: {money(r.collected)}</div>
+                    <div className="text-xs text-slate-500">{t('calc.recorded', { amount: money(r.collected) })}</div>
                   )}
                 </td>
                 <td className="px-4 py-3">
@@ -113,7 +122,7 @@ export default function Calculator() {
                     <input className="input w-20" type="number" min="0" max="100" step="any" value={r.inp.percent} onChange={setInput(r.id, 'percent')} />
                     <span>%</span>
                     {Number(r.inp.percent) !== Number(r.teacher_percent) && (
-                      <button className="btn btn-ghost px-2 py-1 text-xs" onClick={() => savePercent(r)} title="Save as this group's default">save</button>
+                      <button className="btn btn-ghost px-2 py-1 text-xs" onClick={() => savePercent(r)} title={t('calc.saveDefault')}>{t('calc.saveShort')}</button>
                     )}
                   </div>
                 </td>
@@ -121,13 +130,13 @@ export default function Calculator() {
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan="5" className="px-4 py-6 text-center text-slate-500">No groups yet.</td></tr>
+              <tr><td colSpan="5" className="px-4 py-6 text-center text-slate-500">{t('calc.noGroups')}</td></tr>
             )}
           </tbody>
           {rows.length > 0 && (
             <tfoot className="border-t-2 border-slate-200 font-semibold dark:border-slate-700">
               <tr>
-                <td className="px-4 py-3" colSpan="2">Total</td>
+                <td className="px-4 py-3" colSpan="2">{t('calc.total')}</td>
                 <td className="px-4 py-3">{money(totalSum)}</td>
                 <td></td>
                 <td className="px-4 py-3 text-right text-base">{money(totalShare)}</td>
@@ -138,25 +147,25 @@ export default function Calculator() {
       </div>
 
       <div className="card space-y-4">
-        <h2 className="font-semibold">Salary received in advance — {MONTHS[ym.month - 1]}</h2>
+        <h2 className="font-semibold">{t('calc.advancesTitle', { month: months[ym.month - 1] })}</h2>
         <form onSubmit={addAdvance} className="flex flex-wrap items-end gap-2">
           <div>
-            <label className="label">Amount</label>
+            <label className="label">{t('pay.amount')}</label>
             <input className="input w-36" type="number" min="0" step="any" required value={advance.amount} onChange={(e) => setAdvance({ ...advance, amount: e.target.value })} />
           </div>
           <div>
-            <label className="label">Date</label>
+            <label className="label">{t('calc.date')}</label>
             <input className="input" type="date" value={advance.received_at} onChange={(e) => setAdvance({ ...advance, received_at: e.target.value })} />
           </div>
           <div className="min-w-48 flex-1">
-            <label className="label">Note</label>
+            <label className="label">{t('calc.note')}</label>
             <input className="input" value={advance.note} onChange={(e) => setAdvance({ ...advance, note: e.target.value })} />
           </div>
-          <button className="btn btn-primary">+ Add advance</button>
+          <button className="btn btn-primary">{t('calc.addAdvance')}</button>
         </form>
         {error && <p className="text-sm text-red-600">{error}</p>}
         {data.advances.length === 0 ? (
-          <p className="text-sm text-slate-500">No advances this month.</p>
+          <p className="text-sm text-slate-500">{t('calc.noAdvances')}</p>
         ) : (
           <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {data.advances.map((a) => (
@@ -164,7 +173,7 @@ export default function Calculator() {
                 <span className="w-24 text-slate-500">{a.received_at}</span>
                 <span className="w-32 font-semibold">{money(a.amount)}</span>
                 <span className="flex-1 text-slate-500">{a.note}</span>
-                <button className="text-red-600 hover:underline" onClick={() => deleteAdvance(a)}>delete</button>
+                <button className="text-red-600 hover:underline" onClick={() => deleteAdvance(a)}>{t('common.deleteLower')}</button>
               </li>
             ))}
           </ul>

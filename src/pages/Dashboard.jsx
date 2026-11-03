@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { api } from '../api'
 import GroupForm from '../components/GroupForm.jsx'
 import Modal from '../components/Modal.jsx'
-import { MONTHS, lessonDaysLabel, money } from '../utils'
+import { useI18n } from '../i18n.jsx'
+import { lessonDaysLabel, money } from '../utils'
 
 const LEVEL_COLORS = {
   beginner: 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-200',
@@ -15,6 +16,7 @@ const LEVEL_COLORS = {
 }
 
 export default function Dashboard() {
+  const { t, months, weekdays, levels } = useI18n()
   const [groups, setGroups] = useState(null)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
@@ -26,11 +28,11 @@ export default function Dashboard() {
 
   const now = new Date()
   const totals = (groups || []).reduce(
-    (t, g) => ({
-      students: t.students + g.student_count,
-      paid: t.paid + g.paid_count,
-      pending: t.pending + g.pending_count,
-      overdue: t.overdue + g.overdue_count,
+    (tot, g) => ({
+      students: tot.students + g.student_count,
+      paid: tot.paid + g.paid_count,
+      pending: tot.pending + g.pending_count,
+      overdue: tot.overdue + g.overdue_count,
     }),
     { students: 0, paid: 0, pending: 0, overdue: 0 },
   )
@@ -39,35 +41,35 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">My groups</h1>
-          <p className="text-sm text-slate-500">Payments for {MONTHS[now.getMonth()]} {now.getFullYear()}</p>
+          <h1 className="text-2xl font-bold">{t('dash.title')}</h1>
+          <p className="text-sm text-slate-500">{t('dash.paymentsFor', { month: months[now.getMonth()], year: now.getFullYear() })}</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setCreating(true)}>+ New group</button>
+        <button className="btn btn-primary" onClick={() => setCreating(true)}>{t('dash.newGroup')}</button>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Students" value={totals.students} />
-        <Stat label="Paid" value={totals.paid} cls="text-emerald-600" />
-        <Stat label="Not paid yet" value={totals.pending} cls="text-orange-500" />
-        <Stat label="Overdue (5th+)" value={totals.overdue} cls="text-red-600" />
+        <Stat label={t('dash.students')} value={totals.students} />
+        <Stat label={t('dash.paid')} value={totals.paid} cls="text-emerald-600" />
+        <Stat label={t('dash.notPaid')} value={totals.pending} cls="text-orange-500" />
+        <Stat label={t('dash.overdue')} value={totals.overdue} cls="text-red-600" />
       </div>
 
       {error && <p className="text-red-600">{error}</p>}
       {!groups ? (
-        <p className="text-slate-500">Loading…</p>
+        <p className="text-slate-500">{t('common.loading')}</p>
       ) : groups.length === 0 ? (
-        <div className="card text-center text-slate-500">No groups yet. Create your first group.</div>
+        <div className="card text-center text-slate-500">{t('dash.empty')}</div>
       ) : (
         <div className="card overflow-x-auto p-0">
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-slate-800">
               <tr>
-                <th className="px-4 py-3">Group</th>
-                <th className="px-4 py-3">Level</th>
-                <th className="px-4 py-3">Schedule</th>
-                <th className="px-4 py-3 text-right">Fee</th>
-                <th className="px-4 py-3 text-center">Students</th>
-                <th className="px-4 py-3">Payments this month</th>
+                <th className="px-4 py-3">{t('col.group')}</th>
+                <th className="px-4 py-3">{t('col.level')}</th>
+                <th className="px-4 py-3">{t('col.schedule')}</th>
+                <th className="px-4 py-3 text-right">{t('col.fee')}</th>
+                <th className="px-4 py-3 text-center">{t('col.students')}</th>
+                <th className="px-4 py-3">{t('col.paymentsMonth')}</th>
               </tr>
             </thead>
             <tbody>
@@ -77,10 +79,10 @@ export default function Dashboard() {
                     <Link to={`/groups/${g.id}`} className="font-semibold text-indigo-600 hover:underline dark:text-indigo-400">{g.name}</Link>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`badge ${LEVEL_COLORS[g.level]}`}>{g.level_display}</span>
+                    <span className={`badge ${LEVEL_COLORS[g.level]}`}>{levels[g.level] || g.level_display}</span>
                   </td>
                   <td className="px-4 py-3 text-slate-500">
-                    {lessonDaysLabel(g.lesson_days)} {g.lesson_time && `· ${g.lesson_time}`}
+                    {lessonDaysLabel(g.lesson_days, weekdays)} {g.lesson_time && `· ${g.lesson_time}`}
                   </td>
                   <td className="px-4 py-3 text-right">{money(g.monthly_fee)}</td>
                   <td className="px-4 py-3 text-center">{g.student_count}</td>
@@ -95,7 +97,7 @@ export default function Dashboard() {
       )}
 
       {creating && (
-        <Modal title="New group" onClose={() => setCreating(false)}>
+        <Modal title={t('group.new')} onClose={() => setCreating(false)}>
           <GroupForm onSaved={() => { setCreating(false); load() }} />
         </Modal>
       )}
@@ -113,6 +115,7 @@ function Stat({ label, value, cls = '' }) {
 }
 
 function PaymentBar({ g }) {
+  const { t } = useI18n()
   const total = g.student_count || 1
   return (
     <div className="flex items-center gap-2">
@@ -121,7 +124,7 @@ function PaymentBar({ g }) {
         <div className="bg-orange-400" style={{ width: `${(g.pending_count / total) * 100}%` }} />
         <div className="bg-red-500" style={{ width: `${(g.overdue_count / total) * 100}%` }} />
       </div>
-      <span className="text-xs text-slate-500">{g.paid_count}/{g.student_count} paid</span>
+      <span className="text-xs text-slate-500">{t('dash.paidOf', { paid: g.paid_count, total: g.student_count })}</span>
     </div>
   )
 }

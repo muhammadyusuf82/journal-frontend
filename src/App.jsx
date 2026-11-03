@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './auth.jsx'
+import { useI18n } from './i18n.jsx'
 import Layout from './components/Layout.jsx'
 import Login from './pages/Login.jsx'
 import Dashboard from './pages/Dashboard.jsx'
@@ -10,7 +11,8 @@ import Channels from './pages/Channels.jsx'
 
 function Protected({ children }) {
   const { user, loading } = useAuth()
-  if (loading) return <div className="p-8 text-center text-slate-500">Loading…</div>
+  const { t } = useI18n()
+  if (loading) return <div className="p-8 text-center text-slate-500">{t('common.loading')}</div>
   return user ? children : <Navigate to="/login" replace />
 }
 
