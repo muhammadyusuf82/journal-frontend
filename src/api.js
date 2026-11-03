@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_URL || '/api'
+const BASE = 'https://digitaljournal.pythonanywhere.com/api'
 
 export function getToken() {
   try {
